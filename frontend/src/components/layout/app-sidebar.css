@@ -1,0 +1,45 @@
+/* Enhanced logo transitions for sidebar collapse */
+.sidebar-logo-container {
+  transition: all 0.2s ease-linear;
+}
+
+.sidebar-logo {
+  transition: all 0.2s ease-linear;
+  will-change: transform, opacity, width, height;
+}
+
+/* Smooth transitions for sidebar state changes */
+[data-state="collapsed"] .sidebar-logo-container {
+  padding: 0.25rem;
+}
+
+[data-state="expanded"] .sidebar-logo-container {
+  padding: 0.5rem;
+}
+
+/* Logo size adjustments for different states */
+[data-state="collapsed"] .sidebar-logo {
+  height: 1.5rem;
+  width: 1.5rem;
+  opacity: 0.8;
+  transform: scale(0.9);
+}
+
+[data-state="expanded"] .sidebar-logo {
+  height: 2rem;
+  width: auto;
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Responsive adjustments for larger screens */
+@media (min-width: 640px) {
+  [data-state="expanded"] .sidebar-logo {
+    height: 2.5rem;
+  }
+}
+
+/* Ensure smooth transitions during sidebar toggle */
+.sidebar-logo-container * {
+  transition: inherit;
+}
