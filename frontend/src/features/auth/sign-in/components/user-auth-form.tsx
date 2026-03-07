@@ -3,7 +3,9 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
+import { jwtDecode } from 'jwt-decode'
 import { useAuthStore } from '@/stores/authStore'
+import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -20,11 +22,11 @@ import { PasswordInput } from '@/components/password-input'
 type UserAuthFormProps = HTMLAttributes<HTMLFormElement>
 
 const formSchema = z.object({
-  username: z.string().min(1, 'Please enter your username'),
+  email: z.string().email('Please enter a valid email address'),
   password: z
     .string()
     .min(1, 'Please enter your password')
-    .min(7, 'Password must be at least 7 characters long'),
+    .min(8, 'Password must be at least 8 characters long'),
 })
 
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
@@ -37,7 +39,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: '',
+      email: '',
       password: '',
     },
   })
@@ -46,37 +48,32 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     setIsLoading(true)
     setError(null)
     try {
-      // Simulate network request
-      await new Promise(resolve => setTimeout(resolve, 800))
+      const response = await api.post('/auth/authenticate', {
+        email: data.email,
+        password: data.password,
+      })
 
-      const token = 'static-jwt-token-123456789'
+      const token = response.data.token
       setAccessToken(token)
 
-      // Mock setting user info based on entered username/password
-      // Default to Agent, but if name contains 'user' we mock it as user
-      let role = ['ROLE_AGENT']
-      let firstName = 'Agent'
-      if (data.username.toLowerCase().includes('admin')) {
-        role = ['ROLE_ADMIN']
-        firstName = 'Admin'
-      } else if (data.username.toLowerCase().includes('user')) {
-        role = ['ROLE_USER']
-        firstName = 'Utilisateur'
-      }
+      // Decode JWT to extract user info
+      const decoded: any = jwtDecode(token)
 
+      // The backend adds 'sub' (email) and 'role' to the token claims
       setUser({
-        accountNo: data.username,
-        email: `${data.username}@example.com`,
-        firstName,
-        lastName: 'Mock',
-        role,
-        exp: 0,
+        accountNo: decoded.sub,
+        email: decoded.sub,
+        firstName: decoded.firstName || decoded.sub.split('@')[0],
+        lastName: decoded.lastName || 'User',
+        role: [decoded.role], // Role from token
+        exp: decoded.exp,
       })
 
       const to = search?.redirect || '/'
       navigate({ to })
     } catch (e: any) {
-      setError(e?.response?.data?.message || 'Authentication failed')
+      console.error('Login error:', e)
+      setError(e?.response?.data?.message || 'Identifiants invalides ou erreur serveur')
     } finally {
       setIsLoading(false)
     }
@@ -91,12 +88,12 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
       >
         <FormField
           control={form.control}
-          name='username'
+          name='email'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>CIN</FormLabel>
+              <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder='Entrez votre numéro CIN' {...field} />
+                <Input placeholder='admin@dakar.sn' {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -107,7 +104,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
           name='password'
           render={({ field }) => (
             <FormItem className='relative'>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>Mot de passe</FormLabel>
               <FormControl>
                 <PasswordInput placeholder='********' {...field} />
               </FormControl>
@@ -116,13 +113,13 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                 to='/forgot-password'
                 className='text-muted-foreground absolute -top-0.5 right-0 text-sm font-medium hover:opacity-75'
               >
-                Forgot password?
+                Mot de passe oublié ?
               </Link>
             </FormItem>
           )}
         />
         <Button className='mt-2' disabled={isLoading}>
-          Login
+          {isLoading ? 'Connexion...' : 'Se connecter'}
         </Button>
         {error && <p className='mt-2 text-sm text-red-600'>{error}</p>}
       </form>

@@ -27,34 +27,33 @@ import { serviceDefinitions, type ServiceDefinition } from './data/services'
 import { getServiceIdFromUrl } from '@/lib/url-encryption'
 
 const schema = z.object({
-  country: z.enum(['Tunisie', 'Sénégal']),
+  country: z.string(),
   service: z.string().min(1, 'Le type de service est requis.'),
   dynamic: z.record(z.string(), z.any()).optional(),
 })
 
-type FormValues = z.infer<typeof schema>
+type FormValues = {
+  country: string
+  service: string
+  dynamic?: Record<string, any>
+}
 
 export default function CreateRequestPage() {
   const navigate = useNavigate()
   const search = useSearch({ from: '/_authenticated/requests/new' }) as Partial<{
     service: string
-    country: 'Tunisie' | 'Sénégal'
+    country: string
   }>
-  const [selectedCountry, setSelectedCountry] = useState<'Tunisie' | 'Sénégal'>('Tunisie')
+  const [selectedCountry] = useState<string>('Sénégal')
   const [selectedService, setSelectedService] = useState('')
   const [documentsFiles, setDocumentsFiles] = useState<Record<string, File | undefined>>({})
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { country: 'Tunisie', service: '', dynamic: {} },
+    defaultValues: { country: 'Sénégal', service: '', dynamic: {} },
   })
 
-  // Preselect via search params if provided
   useEffect(() => {
-    if (search.country && (search.country === 'Tunisie' || search.country === 'Sénégal')) {
-      setSelectedCountry(search.country)
-      form.setValue('country', search.country)
-    }
     if (search.service) {
       const decryptedService = getServiceIdFromUrl(search.service)
       if (decryptedService) {
@@ -65,7 +64,7 @@ export default function CreateRequestPage() {
         form.setValue('service', search.service)
       }
     }
-  }, [search.country, search.service])
+  }, [search.service])
 
   const availableServices = useMemo(
     () => serviceDefinitions.filter((s) => s.country === selectedCountry),
@@ -85,9 +84,9 @@ export default function CreateRequestPage() {
   const onSubmit = (values: FormValues) => {
     const dynamicPart = values.dynamic
       ? Object.entries(values.dynamic)
-          .filter(([, v]) => v !== undefined && v !== '')
-          .map(([k, v]) => `${k}: ${v}`)
-          .join(' | ')
+        .filter(([, v]) => v !== undefined && v !== '')
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(' | ')
       : ''
     const docsPart = Object.entries(documentsFiles)
       .filter(([, f]) => !!f)
@@ -96,7 +95,6 @@ export default function CreateRequestPage() {
     const descriptionParts = [dynamicPart, docsPart].filter(Boolean)
     const description = descriptionParts.join(' | ')
 
-    // NOTE: Files are not posted yet; wire to backend when available. We include filenames in description for now.
     createMut.mutate({ type: values.service, description, status: 'PENDING' } as any)
   }
 
@@ -140,32 +138,6 @@ export default function CreateRequestPage() {
             <Form {...form}>
               <form id='create-request-form' onSubmit={form.handleSubmit(onSubmit)} className='grid grid-cols-1 gap-6 md:grid-cols-2'>
                 {/* Sélection */}
-                <FormField
-                  control={form.control}
-                  name='country'
-                  render={({ field }) => (
-                    <FormItem className='space-y-1 md:col-span-1'>
-                      <FormLabel>Pays</FormLabel>
-                      <FormControl>
-                        <SelectDropdown
-                          defaultValue={field.value}
-                          onValueChange={(val) => {
-                            field.onChange(val)
-                            setSelectedCountry(val as 'Tunisie' | 'Sénégal')
-                            setSelectedService('')
-                            setDocumentsFiles({})
-                          }}
-                          placeholder='Sélectionner le pays'
-                          items={[
-                            { label: 'Tunisie', value: 'Tunisie' },
-                            { label: 'Sénégal', value: 'Sénégal' },
-                          ]}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
 
                 <FormField
                   control={form.control}
@@ -219,7 +191,6 @@ export default function CreateRequestPage() {
                   </div>
                 ) : null}
 
-                {/* Documents requis */}
                 {serviceConfig?.documents && serviceConfig.documents.length > 0 ? (
                   <div className='md:col-span-2'>
                     <div className='mb-2 text-sm font-medium'>Documents requis</div>

@@ -1,10 +1,10 @@
 import Cookies from 'js-cookie'
 import { create } from 'zustand'
 
-const ACCESS_TOKEN = 'thisisjustarandomstring'
+const ACCESS_TOKEN = 'auth_token'
 const USER_INFO = 'auth_user_info'
 
-interface AuthUser {
+export interface AuthUser {
   accountNo: string
   email: string
   firstName?: string
@@ -25,8 +25,9 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>()((set) => {
-  const cookieState = Cookies.get(ACCESS_TOKEN)
-  const initToken = cookieState ? JSON.parse(cookieState) : ''
+  const cookieValue = Cookies.get(ACCESS_TOKEN)
+  const initToken = cookieValue || ''
+
   let initUser: AuthUser | null = null
   try {
     const saved = localStorage.getItem(USER_INFO)
@@ -34,24 +35,23 @@ export const useAuthStore = create<AuthState>()((set) => {
   } catch {
     initUser = null
   }
+
   return {
     auth: {
       user: initUser,
       setUser: (user) =>
         set((state) => {
-          try {
-            if (user) {
-              localStorage.setItem(USER_INFO, JSON.stringify(user))
-            } else {
-              localStorage.removeItem(USER_INFO)
-            }
-          } catch {}
+          if (user) {
+            localStorage.setItem(USER_INFO, JSON.stringify(user))
+          } else {
+            localStorage.removeItem(USER_INFO)
+          }
           return { ...state, auth: { ...state.auth, user } }
         }),
       accessToken: initToken,
       setAccessToken: (accessToken) =>
         set((state) => {
-          Cookies.set(ACCESS_TOKEN, JSON.stringify(accessToken))
+          Cookies.set(ACCESS_TOKEN, accessToken, { expires: 7 }) // 7 days
           return { ...state, auth: { ...state.auth, accessToken } }
         }),
       resetAccessToken: () =>
@@ -62,9 +62,7 @@ export const useAuthStore = create<AuthState>()((set) => {
       reset: () =>
         set((state) => {
           Cookies.remove(ACCESS_TOKEN)
-          try {
-            localStorage.removeItem(USER_INFO)
-          } catch {}
+          localStorage.removeItem(USER_INFO)
           return {
             ...state,
             auth: { ...state.auth, user: null, accessToken: '' },
@@ -73,5 +71,3 @@ export const useAuthStore = create<AuthState>()((set) => {
     },
   }
 })
-
-// export const useAuth = () => useAuthStore((state) => state.auth)

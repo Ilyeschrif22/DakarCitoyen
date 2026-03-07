@@ -1,44 +1,23 @@
+import axios from 'axios'
 import { useAuthStore } from '@/stores/authStore'
 import { mockUsers, mockRequests, mockMessages, mockAttachments, mockAppointments } from '../data'
 
-// Mocking the axios api instance to prevent errors in components that import it directly
-export const api = {
-  get: async (url: string) => {
-    // Specifically handle the /api/account call which is used to get the logged-in user's role
-    if (url === '/api/account') {
-      const userStr = localStorage.getItem('auth-storage')
-      let userRole = ['ROLE_USER']
-      let userData: any = {}
-      if (userStr) {
-        try {
-          const stored = JSON.parse(userStr)
-          if (stored?.state?.auth?.user) {
-            userData = stored.state.auth.user
-            userRole = userData.role || ['ROLE_USER']
-          }
-        } catch (e) { }
-      }
-      return {
-        data: {
-          authorities: userRole,
-          login: userData?.accountNo || 'mockuser',
-          firstName: userData?.firstName || 'User',
-          lastName: userData?.lastName || 'Mock',
-          email: userData?.email || 'user@example.com'
-        }
-      }
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+
+export const api = axios.create({
+  baseURL: API_BASE_URL,
+})
+
+api.interceptors.request.use(
+  (config) => {
+    const token = useAuthStore.getState().auth.accessToken
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
     }
-    return { data: {} }
+    return config
   },
-  post: async () => ({ data: {} }),
-  patch: async () => ({ data: {} }),
-  delete: async () => ({ data: {} }),
-  interceptors: {
-    request: {
-      use: () => { }
-    }
-  }
-}
+  (error) => Promise.reject(error)
+)
 
 export interface AppUserDTO {
   id: number
@@ -75,12 +54,21 @@ export interface RequestDTO {
 }
 
 export async function fetchRequests(): Promise<RequestDTO[]> {
-  return Promise.resolve(mockRequests)
+  try {
+    const response = await api.get('/api/demandes')
+    return response.data
+  } catch (e) {
+    return Promise.resolve(mockRequests)
+  }
 }
 
-export async function fetchMyRequests(): Promise<RequestDTO[]> {
-  // In a real app we'd filter by logged in user ID, here we return a subset for demo
-  return Promise.resolve(mockRequests.filter(r => r.citizenId === 3 || r.citizenId === 4))
+export async function fetchMyRequests(userId: string): Promise<RequestDTO[]> {
+  try {
+    const response = await api.get(`/api/demandes/my/${userId}`)
+    return response.data
+  } catch (e) {
+    return Promise.resolve(mockRequests.filter(r => r.citizenId === 3 || r.citizenId === 4))
+  }
 }
 
 export async function fetchRequestById(id: number): Promise<RequestDTO> {
@@ -90,9 +78,14 @@ export async function fetchRequestById(id: number): Promise<RequestDTO> {
 }
 
 export async function createRequest(payload: RequestDTO): Promise<RequestDTO> {
-  const newReq = { ...payload, id: Math.floor(Math.random() * 1000) + 200, status: 'PENDING' as RequestStatus, createdDate: new Date().toISOString() }
-  mockRequests.push(newReq)
-  return Promise.resolve(newReq)
+  try {
+    const response = await api.post('/api/demandes', payload)
+    return response.data
+  } catch (e) {
+    const newReq = { ...payload, id: Math.floor(Math.random() * 1000) + 200, status: 'PENDING' as RequestStatus, createdDate: new Date().toISOString() }
+    mockRequests.push(newReq)
+    return Promise.resolve(newReq)
+  }
 }
 
 export async function updateRequest(id: number, payload: RequestDTO): Promise<RequestDTO> {

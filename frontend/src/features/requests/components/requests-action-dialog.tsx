@@ -25,14 +25,20 @@ import { useMemo, useRef, useState } from 'react'
 import { serviceDefinitions, type ServiceDefinition } from '../data/services'
 
 const formSchema = z.object({
-  country: z.enum(['Tunisie', 'Sénégal']),
+  country: z.string(),
   service: z.string().min(1, 'Le type de service est requis.'),
   dynamic: z.record(z.string(), z.any()).optional(),
   documents: z.array(z.string()).optional(),
   documentsFiles: z.record(z.string(), z.any()).optional(),
 })
 
-type RequestForm = z.infer<typeof formSchema>
+type RequestForm = {
+  country: string
+  service: string
+  dynamic?: Record<string, any>
+  documents?: string[]
+  documentsFiles?: Record<string, any>
+}
 
 interface Props {
   currentRow?: RequestRow
@@ -43,7 +49,7 @@ interface Props {
 
 export function RequestsActionDialog({ currentRow, open, onOpenChange, onSubmitForm }: Props) {
   const isEdit = !!currentRow
-  const [selectedCountry, setSelectedCountry] = useState<'Tunisie' | 'Sénégal'>('Tunisie')
+  const [selectedCountry] = useState<string>('Sénégal')
   const [selectedService, setSelectedService] = useState<string>('')
   const [selectedDocs, setSelectedDocs] = useState<string[]>([])
   const [documentsFiles, setDocumentsFiles] = useState<Record<string, File | undefined>>({})
@@ -51,8 +57,8 @@ export function RequestsActionDialog({ currentRow, open, onOpenChange, onSubmitF
   const form = useForm<RequestForm>({
     resolver: zodResolver(formSchema),
     defaultValues: isEdit
-      ? { country: 'Tunisie', service: currentRow!.type, documents: [], documentsFiles: {} }
-      : { country: 'Tunisie', service: '', dynamic: {}, documents: [], documentsFiles: {} },
+      ? { country: 'Sénégal', service: currentRow!.type, documents: [], documentsFiles: {} }
+      : { country: 'Sénégal', service: '', dynamic: {}, documents: [], documentsFiles: {} },
   })
 
   const availableServices = useMemo(
@@ -109,33 +115,7 @@ export function RequestsActionDialog({ currentRow, open, onOpenChange, onSubmitF
             <form id='request-form' onSubmit={form.handleSubmit(onSubmit)} className='grid grid-cols-1 gap-6 p-0.5 md:grid-cols-2'>
               {/* Section: Sélection */}
               <div className='md:col-span-2'>
-                <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-                  <FormField
-                    control={form.control}
-                    name='country'
-                    render={({ field }) => (
-                      <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
-                        <FormLabel className='col-span-2 text-right'>Pays</FormLabel>
-                        <FormControl>
-                          <SelectDropdown
-                            defaultValue={field.value}
-                            onValueChange={(val) => {
-                              field.onChange(val)
-                              setSelectedCountry(val as 'Tunisie' | 'Sénégal')
-                              setSelectedService('')
-                            }}
-                            placeholder='Sélectionner le pays'
-                            className='col-span-4'
-                            items={[
-                              { label: 'Tunisie', value: 'Tunisie' },
-                              { label: 'Sénégal', value: 'Sénégal' },
-                            ]}
-                          />
-                        </FormControl>
-                        <FormMessage className='col-span-4 col-start-3' />
-                      </FormItem>
-                    )}
-                  />
+                <div className='grid grid-cols-1 gap-4 md:grid-cols-1'>
 
                   <FormField
                     control={form.control}

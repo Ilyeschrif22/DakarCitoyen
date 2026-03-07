@@ -43,7 +43,17 @@ This project is a microservices-based application built with Spring Boot, Spring
 3. **Add Comment**: `POST /demandes/{id}/comments`.
 4. **Update Status**: `PUT /demandes/{id}/status?status=APPROVED&agentId=agent123`.
 
-### 3. Administrator Workflow
-1. **Login**: `POST /auth/authenticate` with role `ADMIN`.
-2. **Supervise**: `GET /demandes` to see all activity.
-3. **Manage Users**: `GET /users` (via User Service).
+## Test Credentials & Roles
+
+The system is pre-configured with the following test users (Password for all: `password123`):
+
+| Role | Email | Purpose |
+| :--- | :--- | :--- |
+| **Admin** | `admin@dakar.sn` | Manage users and oversee all requests. |
+| **Agent** | `agent@dakar.sn` | Process and comment on citizen requests. |
+| **Citoyen** | `citoyen@dakar.sn` | Create and track personal requests. |
+
+## Feature Implementation Details
+- **JWT Security**: Replaced Keycloak with a custom Spring Security + JWT implementation.
+- **Microservices**: Organized into `api-gateway`, `user-service`, and `demande-service`.
+- **Dakar Focus**: UI simplified for Sénégal, defaulting country selection to "Sénégal".
