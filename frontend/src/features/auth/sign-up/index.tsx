@@ -8,6 +8,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar as CalendarIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import axios from 'axios'
 
 const municipalitesTunisiennes = [
   { type: 'Municipalité urbaine', name: 'Tunis' },
@@ -71,11 +72,16 @@ export default function SignupForm() {
     }
 
     try {
-      // Simulate network request
-      await new Promise(resolve => setTimeout(resolve, 800))
+      await axios.post('http://localhost:8090/auth/register', {
+        firstname: formData.firstName,
+        lastname: formData.lastName,
+        email: formData.email,
+        password: formData.motDePasse,
+        role: 'CITOYEN',
+      })
       window.location.href = '/sign-in'
     } catch (err: any) {
-      setErreur(err?.response?.data?.message || 'Échec de l’inscription')
+      setErreur(err?.response?.data?.message || "Échec de l'inscription")
     }
   }
 
@@ -90,7 +96,6 @@ export default function SignupForm() {
             </p>
           </div>
           <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-
             <div className="space-y-2">
               <Label>Prénom</Label>
               <Input name="firstName" value={formData.firstName} onChange={handleChange} />
@@ -165,7 +170,6 @@ export default function SignupForm() {
                 </SelectContent>
               </Select>
             </div>
-            {/* Password + Confirmation */}
             <div className="grid grid-cols-2 gap-4 col-span-2">
               <div className="space-y-2">
                 <Label htmlFor="motDePasse">Mot de passe</Label>
